@@ -1,0 +1,47 @@
+# ─────────────────────────────────────────
+# Stage 1: Build stage
+# Install ALL dependencies and build frontend
+# ─────────────────────────────────────────
+FROM node:20-alpine AS builder
+
+WORKDIR /app
+
+# Install dependencies needed for build
+RUN apk add --no-cache python3 make g++
+
+ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1
+
+# Copy package files first (layer caching)
+COPY package*.json ./
+
+# Install ALL dependencies (including dev) for building
+RUN npm ci --legacy-peer-deps
+
+# Copy source code
+COPY . .
+
+# Build the Vue.js frontend
+RUN npm run build
+
+# ─────────────────────────────────────────
+# Stage 2: Production image
+# Only keep what's needed to run the app
+# ─────────────────────────────────────────
+FROM node:20-alpine AS release
+
+WORKDIR /app
+
+# Copy built app from builder stage
+COPY --from=builder /app /app
+
+# Remove dev dependencies to keep image clean
+RUN npm prune --omit=dev --legacy-peer-deps
+
+# Create data directory for SQLite database
+RUN mkdir -p /app/data
+
+EXPOSE 3001
+
+ENV UPTIME_KUMA_IS_CONTAINER=1
+
+CMD ["node", "server/server.js"]

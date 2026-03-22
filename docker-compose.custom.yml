@@ -1,0 +1,23 @@
+services:
+  uptime-kuma:
+    build:
+      context: .
+      dockerfile: Dockerfile.custom
+    container_name: uptime-kuma
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    volumes:
+      - uptime-kuma-data:/app/data
+    environment:
+      - UPTIME_KUMA_IS_CONTAINER=1
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3001"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  uptime-kuma-data:
+    driver: local
