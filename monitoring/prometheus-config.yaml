@@ -9,6 +9,14 @@ data:
       scrape_interval: 15s
       evaluation_interval: 15s
 
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets: ['alertmanager:9093']
+
+    rule_files:
+      - /etc/prometheus/alert-rules.yml
+
     scrape_configs:
       - job_name: 'uptime-kuma'
         static_configs:
@@ -17,3 +25,31 @@ data:
           username: 'jimmy.j'
           password: 'Jimmy@123'
         metrics_path: '/metrics'
+
+  alert-rules.yml: |
+    groups:
+      - name: uptime-kuma-alerts
+        rules:
+          - alert: HighMemoryUsage
+            expr: process_heap_bytes > 250000000
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              description: "Uptime Kuma heap memory is above 150MB"
+
+          - alert: HighEventLoopLag
+            expr: nodejs_eventloop_lag_seconds > 0.5
+            for: 1m
+            labels:
+              severity: warning
+            annotations:
+              description: "Uptime Kuma event loop lag is above 500ms"
+
+          - alert: AppDown
+            expr: up{job="uptime-kuma"} == 0
+            for: 30s
+            labels:
+              severity: critical
+            annotations:
+              description: "Uptime Kuma is down!"
