@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: uptime-kuma-config
+  namespace: default
+data:
+  UPTIME_KUMA_IS_CONTAINER: "1"

@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: uptime-kuma
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: uptime-kuma
+  template:
+    metadata:
+      labels:
+        app: uptime-kuma
+    spec:
+      containers:
+        - name: uptime-kuma
+          # Pull image from Docker Hub
+          image: jimmyj13/uptime-kuma:latest
+          ports:
+            - containerPort: 3001
+          # Load env vars from ConfigMap
+          envFrom:
+            - configMapRef:
+                name: uptime-kuma-config
+          # Persistent storage for database
+          volumeMounts:
+            - name: data
+              mountPath: /app/data
+          # Health check
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: uptime-kuma-pvc
