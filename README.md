@@ -1,203 +1,168 @@
-<div align="center" width="100%">
-    <img src="./public/icon.svg" width="128" alt="Uptime Kuma Logo" />
-</div>
+# Uptime Kuma DevOps Project
 
-# Uptime Kuma
+A complete DevOps pipeline built around [Uptime Kuma](https://github.com/louislam/uptime-kuma), an open-source monitoring tool. This project demonstrates containerization, CI/CD automation, Kubernetes orchestration, and a full monitoring/alerting stack.
 
-Uptime Kuma is an easy-to-use self-hosted monitoring tool.
+---
 
-<a target="_blank" href="https://github.com/louislam/uptime-kuma"><img src="https://img.shields.io/github/stars/louislam/uptime-kuma?style=flat" /></a> <a target="_blank" href="https://hub.docker.com/r/louislam/uptime-kuma"><img src="https://img.shields.io/docker/pulls/louislam/uptime-kuma" /></a> <a target="_blank" href="https://hub.docker.com/r/louislam/uptime-kuma"><img src="https://img.shields.io/docker/v/louislam/uptime-kuma/2?label=docker%20image%20ver." /></a> <a target="_blank" href="https://github.com/louislam/uptime-kuma"><img src="https://img.shields.io/github/last-commit/louislam/uptime-kuma" /></a> <a target="_blank" href="https://opencollective.com/uptime-kuma"><img src="https://opencollective.com/uptime-kuma/total/badge.svg?label=Open%20Collective%20Backers&color=brightgreen" /></a>
-[![GitHub Sponsors](https://img.shields.io/github/sponsors/louislam?label=GitHub%20Sponsors)](https://github.com/sponsors/louislam) <a href="https://weblate.kuma.pet/projects/uptime-kuma/uptime-kuma/">
-<img src="https://weblate.kuma.pet/widgets/uptime-kuma/-/svg-badge.svg" alt="Translation status" />
-</a>
+## Architecture Overview
+```
+GitHub Push
+    ↓
+GitHub Actions (CI/CD)
+    ↓ builds & pushes
+Docker Hub
+    ↓ image pulled by
+Kubernetes (Minikube)
+    ├── uptime-kuma    → monitors services
+    ├── prometheus     → scrapes metrics
+    ├── grafana        → visualizes metrics
+    └── alertmanager   → sends Slack alerts
+         ↓
+    Nginx Ingress
+    ├── uptime-kuma.local
+    ├── grafana.local
+    └── prometheus.local
+```
 
-<img src="https://user-images.githubusercontent.com/1336778/212262296-e6205815-ad62-488c-83ec-a5b0d0689f7c.jpg" width="700" alt="Uptime Kuma Dashboard Screenshot" />
+---
 
-## 🥔 Live Demo
+## Project Structure
+```
+uptime-kuma/
+├── Dockerfile.custom              # Multi-stage Docker build
+├── docker-compose.custom.yml      # Local development setup
+├── .github/
+│   └── workflows/
+│       └── ci.yml                 # GitHub Actions CI/CD pipeline
+├── k8s/
+│   ├── configmap.yaml             # App environment config
+│   ├── deployment.yaml            # Kubernetes deployment
+│   ├── service.yaml               # NodePort service
+│   ├── pvc.yaml                   # Persistent volume for SQLite
+│   └── ingress.yaml               # Nginx ingress routing
+└── monitoring/
+    ├── prometheus-config.yaml     # Scrape config + alert rules
+    ├── prometheus-deployment.yaml # Prometheus deployment
+    ├── grafana-deployment.yaml    # Grafana + persistent volume
+    ├── alertmanager-config.yaml   # Slack notification config
+    └── alertmanager-deployment.yaml # Alertmanager deployment
+```
 
-Try it!
+---
 
-Demo Server (Location: Frankfurt - Germany): <https://demo.kuma.pet/start-demo>
+## Features
 
-It is a temporary live demo, all data will be deleted after 10 minutes. Sponsored by [Uptime Kuma Sponsors](https://github.com/louislam/uptime-kuma#%EF%B8%8F-sponsors).
+- **Docker** — Multi-stage build optimized for production, separating build and runtime layers
+- **Docker Compose** — Single command local development environment
+- **CI/CD** — GitHub Actions pipeline automatically builds and pushes Docker image to Docker Hub on every push to master, tagged with both `latest` and commit SHA
+- **Kubernetes** — Full K8s deployment with health probes, persistent storage, and environment configuration via ConfigMap
+- **Ingress** — Nginx Ingress controller for domain-based routing without port numbers
+- **Prometheus** — Scrapes `/metrics` endpoint every 15 seconds with three alert rules (HighMemoryUsage, HighEventLoopLag, AppDown)
+- **Grafana** — Persistent dashboards showing heap memory, event loop lag, and open connections
+- **Alertmanager** — Fires Slack notifications when alert thresholds are breached, with resolved notifications when issues clear
 
-## ⭐ Features
+---
 
-- Monitoring uptime for HTTP(s) / TCP / HTTP(s) Keyword / HTTP(s) Json Query / Websocket / Ping / DNS Record / Push / Steam Game Server / Docker Containers
-- Fancy, Reactive, Fast UI/UX
-- Notifications via Telegram, Discord, Gotify, Slack, Pushover, Email (SMTP), and [90+ notification services, click here for the full list](https://github.com/louislam/uptime-kuma/tree/master/src/components/notifications)
-- 20-second intervals
-- [Multi Languages](https://github.com/louislam/uptime-kuma/tree/master/src/lang)
-- Multiple status pages
-- Map status pages to specific domains
-- Ping chart
-- Certificate info
-- Proxy support
-- 2FA support
+## Prerequisites
 
-## 🔧 How to Install
+- Docker
+- kubectl
+- Minikube
+- GitHub account
+- Docker Hub account
 
-### 🐳 Docker Compose
+---
 
+## Getting Started
+
+### 1. Clone the repo
 ```bash
-mkdir uptime-kuma
+git clone https://github.com/jimmyj13/uptime-kuma
 cd uptime-kuma
-curl -o compose.yaml https://raw.githubusercontent.com/louislam/uptime-kuma/master/compose.yaml
-docker compose up -d
 ```
 
-Uptime Kuma is now running on all network interfaces (e.g. http://localhost:3001 or http://your-ip:3001).
-
-> [!WARNING]
-> File Systems like **NFS** (Network File System) are **NOT** supported. Please map to a local directory or volume.
-
-### 🐳 Docker Command
-
+### 2. Run locally with Docker Compose
 ```bash
-docker run -d --restart=always -p 3001:3001 -v uptime-kuma:/app/data --name uptime-kuma louislam/uptime-kuma:2
+docker compose -f docker-compose.custom.yml up -d
 ```
+Access at `http://localhost:3001`
 
-Uptime Kuma is now running on all network interfaces (e.g. http://localhost:3001 or http://your-ip:3001).
+### 3. Deploy to Kubernetes
 
-If you want to limit exposure to localhost only:
-
+Start Minikube:
 ```bash
-docker run ... -p 127.0.0.1:3001:3001 ...
+minikube start --driver=docker
+minikube addons enable ingress
 ```
 
-### 💪🏻 Non-Docker
-
-Requirements:
-
-- Platform
-  - ✅ Major Linux distros such as Debian, Ubuntu, Fedora and ArchLinux etc.
-  - ✅ Windows 10 (x64), Windows Server 2012 R2 (x64) or higher
-  - ❌ FreeBSD / OpenBSD / NetBSD
-  - ❌ Replit / Heroku
-- [Node.js](https://nodejs.org/en/download/) >= 20.4
-- [Git](https://git-scm.com/downloads)
-- [pm2](https://pm2.keymetrics.io/) - For running Uptime Kuma in the background
-
+Deploy the app:
 ```bash
-git clone https://github.com/louislam/uptime-kuma.git
-cd uptime-kuma
-npm run setup
-
-# Option 1. Try it
-node server/server.js
-
-# (Recommended) Option 2. Run in the background using PM2
-# Install PM2 if you don't have it:
-npm install pm2 -g && pm2 install pm2-logrotate
-
-# Start Server
-pm2 start server/server.js --name uptime-kuma
+kubectl apply -f k8s/
 ```
 
-Uptime Kuma is now running on all network interfaces (e.g. http://localhost:3001 or http://your-ip:3001).
-
-More useful PM2 Commands
-
+Deploy monitoring stack:
 ```bash
-# If you want to see the current console output
-pm2 monit
-
-# If you want to add it to startup
-pm2 startup && pm2 save
+kubectl apply -f monitoring/
 ```
 
-### Advanced Installation
+Add local DNS entries:
+```bash
+echo "$(minikube ip) uptime-kuma.local grafana.local prometheus.local" | sudo tee -a /etc/hosts
+```
 
-If you need more options or need to browse via a reverse proxy, please read:
+### 4. Access the Services
 
-<https://github.com/louislam/uptime-kuma/wiki/%F0%9F%94%A7-How-to-Install>
+| Service | URL |
+|---|---|
+| Uptime Kuma | http://uptime-kuma.local |
+| Grafana | http://grafana.local |
+| Prometheus | http://prometheus.local |
 
-## 🆙 How to Update
+---
 
-Please read:
+## CI/CD Pipeline
 
-<https://github.com/louislam/uptime-kuma/wiki/%F0%9F%86%99-How-to-Update>
+The GitHub Actions pipeline triggers on every push to master and:
+1. Checks out the code
+2. Logs into Docker Hub using repository secrets
+3. Builds the Docker image using `Dockerfile.custom`
+4. Pushes to Docker Hub with two tags: `latest` and the commit SHA
 
-## 🆕 What's Next?
+Required GitHub secrets:
+- `DOCKER_USERNAME` — Docker Hub username
+- `DOCKER_PASSWORD` — Docker Hub access token
 
-I will assign requests/issues to the next milestone.
+---
 
-<https://github.com/louislam/uptime-kuma/milestones>
+## Monitoring & Alerting
 
-## ❤️ Sponsors
+Prometheus scrapes metrics from Uptime Kuma every 15 seconds. Three alert rules are configured:
 
-Thank you so much! (GitHub Sponsors will be updated manually. OpenCollective sponsors will be updated automatically, the list will be cached by GitHub though. It may need some time to be updated)
+| Alert | Condition | Severity |
+|---|---|---|
+| HighMemoryUsage | Heap > 250MB for 1 minute | Warning |
+| HighEventLoopLag | Event loop lag > 500ms for 1 minute | Warning |
+| AppDown | App unreachable for 30 seconds | Critical |
 
-<img src="https://uptime.kuma.pet/sponsors?v=6" alt="Uptime Kuma Sponsors" />
+Alerts are routed through Alertmanager to Slack. The Slack webhook URL is stored as a Kubernetes Secret and injected at runtime — never committed to Git.
 
-## 🖼 More Screenshots
+---
 
-Light Mode:
+## Key Learnings
 
-<img src="https://uptime.kuma.pet/img/light.jpg" width="512" alt="Uptime Kuma Light Mode Screenshot of how the Dashboard looks" />
+- Multi-stage Docker builds reduce final image size by separating build and runtime dependencies
+- Kubernetes PersistentVolumeClaims ensure data survives pod restarts
+- GitHub secret scanning blocks accidental credential commits — secrets belong in Kubernetes Secrets or environment variables
+- Readiness and liveness probes prevent traffic from reaching unhealthy pods
+- Ingress eliminates the need for port-based access in production-like environments
 
-Status Page:
+---
 
-<img src="https://user-images.githubusercontent.com/1336778/134628766-a3fe0981-0926-4285-ab46-891a21c3e4cb.png" width="512" alt="Uptime Kuma Status Page Screenshot" />
+## Tech Stack
 
-Settings Page:
-
-<img src="https://louislam.net/uptimekuma/2.jpg" width="400" alt="Uptime Kuma Settings Page Screenshot" />
-
-Telegram Notification Sample:
-
-<img src="https://louislam.net/uptimekuma/3.jpg" width="400" alt="Uptime Kuma Telegram Notification Sample Screenshot" />
-
-## Motivation
-
-- I was looking for a self-hosted monitoring tool like "Uptime Robot", but it is hard to find a suitable one. One of the closest ones is statping. Unfortunately, it is not stable and no longer maintained.
-- Wanted to build a fancy UI.
-- Learn Vue 3 and vite.js.
-- Show the power of Bootstrap 5.
-- Try to use WebSocket with SPA instead of a REST API.
-- Deploy my first Docker image to Docker Hub.
-
-If you love this project, please consider giving it a ⭐.
-
-## 🗣️ Discussion / Ask for Help
-
-⚠️ For any general or technical questions, please don't send me an email, as I am unable to provide support in that manner. I will not respond if you ask questions there.
-
-I recommend using Google, GitHub Issues, or Uptime Kuma's subreddit for finding answers to your question. If you cannot find the information you need, feel free to ask:
-
-- [GitHub Issues](https://github.com/louislam/uptime-kuma/issues)
-- [Subreddit (r/UptimeKuma)](https://www.reddit.com/r/UptimeKuma/)
-
-My Reddit account: [u/louislamlam](https://reddit.com/u/louislamlam)
-You can mention me if you ask a question on the subreddit.
-
-## Contributions
-
-### Create Pull Requests
-
-Pull requests are awesome.
-To keep reviews fast and effective, please make sure you’ve [read our pull request guidelines](https://github.com/louislam/uptime-kuma/blob/master/CONTRIBUTING.md#can-i-create-a-pull-request-for-uptime-kuma).
-
-### Test Pull Requests
-
-There are a lot of pull requests right now, but I don't have time to test them all.
-
-If you want to help, you can check this:
-<https://github.com/louislam/uptime-kuma/wiki/Test-Pull-Requests>
-
-### Test Beta Version
-
-Check out the latest beta release here: <https://github.com/louislam/uptime-kuma/releases>
-
-### Bug Reports / Feature Requests
-
-If you want to report a bug or request a new feature, feel free to open a [new issue](https://github.com/louislam/uptime-kuma/issues).
-
-### Translations
-
-If you want to translate Uptime Kuma into your language, please visit [Weblate Readme](https://github.com/louislam/uptime-kuma/blob/master/src/lang/README.md).
-
-### Spelling & Grammar
-
-Feel free to correct the grammar in the documentation or code.
-My mother language is not English and my grammar is not that great.
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![Kubernetes](https://img.shields.io/badge/Kubernetes-326CE5?style=flat&logo=kubernetes&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?style=flat&logo=github-actions&logoColor=white)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=grafana&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
